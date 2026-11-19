@@ -2,6 +2,7 @@ import os
 import tempfile
 
 os.environ["MOTORPULSE_DB"] = os.path.join(tempfile.mkdtemp(), "test.db")
+os.environ["MOTORPULSE_SEED"] = "0"
 
 from fastapi.testclient import TestClient  # noqa: E402
 from server.main import app  # noqa: E402

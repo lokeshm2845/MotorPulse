@@ -52,6 +52,10 @@ def db():
 def init_db() -> None:
     with db() as con:
         con.executescript(SCHEMA)
+        # demo fleet (flagged SIMULATED) so a fresh deployment's dashboard is not empty
+        if os.environ.get("MOTORPULSE_SEED", "1") == "1" and not con.execute("SELECT 1 FROM machines LIMIT 1").fetchone():
+            from server.seed import seed
+            seed(con)
 
 
 class MachineIn(BaseModel):

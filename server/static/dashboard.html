@@ -39,6 +39,7 @@
     <tbody id="rows"><tr><td colspan="6" class="empty">No machines synced yet.</td></tr></tbody>
   </table>
   <p class="muted">Results only: audio never leaves farmers' phones. Refreshes every 10 seconds.</p>
+  <p class="muted" id="demo-note" hidden>Machines marked <span class="sim" style="margin-left:0">SIMULATED</span> are demo data for this prototype; checks synced from phones appear alongside them.</p>
 </main>
 <script>
 const CAUSE = { bearing: "Bearing wear", cavitation: "Cavitation / dry running", imbalance: "Imbalance / looseness", electrical: "Electrical", unknown: "Unusual sound" };
@@ -56,6 +57,7 @@ async function load() {
       <td>${m.top_fault ? esc(CAUSE[m.top_fault] || m.top_fault) + (m.fault_confidence != null ? ` <span class="muted">${Math.round(m.fault_confidence * 100)}%</span>` : "") : "–"}</td>
       <td class="hide-sm">${m.last_ts ? new Date(m.last_ts).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</td>
       <td class="hide-sm">${m.n_checks}</td></tr>`).join("") : '<tr><td colspan="6" class="empty">No machines synced yet.</td></tr>';
+    document.getElementById("demo-note").hidden = !d.machines.some((m) => m.simulated);
     document.getElementById("updated").textContent = "Updated " + new Date().toLocaleTimeString("en-IN");
   } catch (e) { document.getElementById("updated").textContent = "Offline"; }
 }
