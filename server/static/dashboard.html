@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MotorPulse Fleet</title>
+<style>
+  :root { --deep:#0B3D2E; --green:#14825F; --tint:#EDF5F1; --amber:#F5A524; --red:#E5484D; --ink:#1B2420; --muted:#5B6B66; --line:#D5E3DC; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,Roboto,sans-serif; background:#F7FAF8; color:var(--ink); }
+  header { background:var(--deep); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  header h1 { margin:0; font-size:21px; } header span { opacity:.8; font-size:14px; }
+  main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .kpi { background:#fff; border-radius:14px; padding:16px; box-shadow:0 2px 10px rgba(11,61,46,.07); }
+  .kpi b { display:block; font-size:34px; } .kpi span { color:var(--muted); font-size:14px; }
+  .kpi.red b { color:var(--red); } .kpi.yellow b { color:#B7791F; } .kpi.green b { color:var(--green); } .kpi.grey b { color:var(--muted); }
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(11,61,46,.07); margin-top:18px; }
+  th, td { text-align:left; padding:12px 14px; border-bottom:1px solid var(--line); font-size:15px; }
+  th { background:var(--tint); color:var(--deep); font-size:13px; text-transform:uppercase; letter-spacing:.04em; }
+  .pill { display:inline-block; border-radius:999px; padding:3px 10px; font-weight:700; font-size:13px; }
+  .pill.red { background:#FBE0E1; color:#B42318; } .pill.yellow { background:#FDF0D5; color:#9A6200; } .pill.green { background:#E6F4EE; color:var(--green); } .pill.none { background:#EEF1F0; color:var(--muted); }
+  .sim { font-size:11px; font-weight:800; background:var(--amber); border-radius:5px; padding:1px 5px; margin-left:6px; }
+  .muted { color:var(--muted); font-size:13px; } .empty { padding:30px; text-align:center; color:var(--muted); }
+  @media (max-width:700px) { .kpis { grid-template-columns:repeat(2,1fr); } .hide-sm { display:none; } th, td { padding:10px 8px; font-size:14px; } }
+</style>
+</head>
+<body>
+<header><h1>MotorPulse · Fleet dashboard</h1><span id="updated">Loading…</span></header>
+<main>
+  <div class="kpis">
+    <div class="kpi red"><b id="k-red">–</b><span>Act now</span></div>
+    <div class="kpi yellow"><b id="k-yellow">–</b><span>Watch</span></div>
+    <div class="kpi green"><b id="k-green">–</b><span>Healthy</span></div>
+    <div class="kpi grey"><b id="k-unchecked">–</b><span>Not checked</span></div>
+  </div>
+  <table>
+    <thead><tr><th>Machine</th><th>Status</th><th>Health</th><th>Likely cause</th><th class="hide-sm">Last check</th><th class="hide-sm">Checks</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="6" class="empty">No machines synced yet.</td></tr></tbody>
+  </table>
+  <p class="muted">Results only: audio never leaves farmers' phones. Refreshes every 10 seconds.</p>
+</main>
+<script>
+const CAUSE = { bearing: "Bearing wear", cavitation: "Cavitation / dry running", imbalance: "Imbalance / looseness", electrical: "Electrical", unknown: "Unusual sound" };
+const LABEL = { red: "Act now", yellow: "Watch", green: "Healthy" };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+async function load() {
+  try {
+    const r = await fetch("/v1/fleet/summary"); const d = await r.json();
+    for (const k of ["red", "yellow", "green", "unchecked"]) document.getElementById("k-" + k).textContent = d.counts[k];
+    const tb = document.getElementById("rows");
+    tb.innerHTML = d.machines.length ? d.machines.map((m) => `<tr>
+      <td><b>${esc(m.name)}</b>${m.simulated ? '<span class="sim">SIMULATED</span>' : ""}<div class="muted">${esc(m.type.replace("_", " "))}${m.location ? " · " + esc(m.location) : ""}</div></td>
+      <td>${m.severity ? `<span class="pill ${m.severity}">${LABEL[m.severity]}</span>` : '<span class="pill none">–</span>'}${m.trend_alarm ? ' <span title="Falling trend">📉</span>' : ""}</td>
+      <td>${m.health ?? "–"}</td>
+      <td>${m.top_fault ? esc(CAUSE[m.top_fault] || m.top_fault) + (m.fault_confidence != null ? ` <span class="muted">${Math.round(m.fault_confidence * 100)}%</span>` : "") : "–"}</td>
+      <td class="hide-sm">${m.last_ts ? new Date(m.last_ts).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "–"}</td>
+      <td class="hide-sm">${m.n_checks}</td></tr>`).join("") : '<tr><td colspan="6" class="empty">No machines synced yet.</td></tr>';
+    document.getElementById("updated").textContent = "Updated " + new Date().toLocaleTimeString("en-IN");
+  } catch (e) { document.getElementById("updated").textContent = "Offline"; }
+}
+load(); setInterval(load, 10000);
+</script>
+</body>
+</html>

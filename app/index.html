@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MotorPulse</title>
+  <meta name="description" content="Hear a pump failure before it happens. Offline AI sound check for farm pumps and motors.">
+  <meta name="theme-color" content="#0B3D2E">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <a href="#/" class="brand" aria-label="MotorPulse home">
+      <svg viewBox="0 0 40 24" class="logo" aria-hidden="true">
+        <g fill="currentColor">
+          <rect x="1" y="9" width="3" height="6" rx="1.5"/><rect x="6" y="6" width="3" height="12" rx="1.5"/>
+          <rect x="11" y="8" width="3" height="8" rx="1.5"/><rect x="16" y="4" width="3" height="16" rx="1.5"/>
+          <rect x="21" y="7" width="3" height="10" rx="1.5"/><rect x="26" y="0" width="3" height="24" rx="1.5" class="peak"/>
+          <rect x="31" y="6" width="3" height="12" rx="1.5"/><rect x="36" y="9" width="3" height="6" rx="1.5"/>
+        </g>
+      </svg>
+      <span>MotorPulse</span>
+    </a>
+    <div class="top-actions">
+      <div class="langs" id="langs" role="group" aria-label="Language"></div>
+      <button id="installBtn" class="icon-btn hidden" type="button" aria-label="Install app">⤓</button>
+      <a href="#/settings" class="icon-btn" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.5 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1L11 21h4l.4-2.9c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5L19.4 13ZM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+      </a>
+    </div>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript>MotorPulse needs JavaScript to run.</noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

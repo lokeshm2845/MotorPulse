@@ -1,0 +1,53 @@
+{
+  "dataset": "DCASE2020 Task2 dev, pump",
+  "enrolClips": 3,
+  "repeats": 5,
+  "meanAUC": 0.657,
+  "meanPAUC": 0.121,
+  "perMachine": [
+    {
+      "id": "00",
+      "enrolClips": 3,
+      "repeats": 5,
+      "testNormal": 100,
+      "testAnomaly": 143,
+      "auc": 0.677,
+      "pauc": 0.142,
+      "aucMin": 0.614,
+      "aucMax": 0.738
+    },
+    {
+      "id": "02",
+      "enrolClips": 3,
+      "repeats": 5,
+      "testNormal": 100,
+      "testAnomaly": 111,
+      "auc": 0.611,
+      "pauc": 0.098,
+      "aucMin": 0.524,
+      "aucMax": 0.651
+    },
+    {
+      "id": "04",
+      "enrolClips": 3,
+      "repeats": 5,
+      "testNormal": 100,
+      "testAnomaly": 100,
+      "auc": 0.76,
+      "pauc": 0.203,
+      "aucMin": 0.67,
+      "aucMax": 0.889
+    },
+    {
+      "id": "06",
+      "enrolClips": 3,
+      "repeats": 5,
+      "testNormal": 100,
+      "testAnomaly": 102,
+      "auc": 0.579,
+      "pauc": 0.04,
+      "aucMin": 0.482,
+      "aucMax": 0.632
+    }
+  ]
+}

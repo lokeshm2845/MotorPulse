@@ -1,0 +1,14 @@
+# Render blueprint: sync API + fleet dashboard (+ a second copy of the phone app at /app).
+# Free plan: the service sleeps after ~15 min idle (first request then takes ~1 min) and the SQLite
+# database is reset on each redeploy. Fine for the prototype; production uses managed PostgreSQL.
+services:
+  - type: web
+    name: motorpulse
+    runtime: python
+    plan: free
+    buildCommand: pip install -r server/requirements.txt
+    startCommand: uvicorn server.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7

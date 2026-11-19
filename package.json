@@ -1,0 +1,12 @@
+{
+  "name": "motorpulse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MotorPulse prototype: offline AI sound check for farm pumps and motors",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/engine.test.mjs",
+    "samples": "node tests/run_samples.mjs",
+    "eval": "node ml/eval_dcase.mjs data/dcase2020_pump/pump 3 5"
+  }
+}

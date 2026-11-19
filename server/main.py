@@ -1,0 +1,164 @@
+"""MotorPulse sync API + fleet dashboard.
+
+Receives check RESULTS (never audio) from phones in idempotent batches, stores them, and serves a fleet
+dashboard for FPOs / panchayats / workshops. Also serves the phone app at /app so the whole prototype runs
+from one command:  uvicorn server.main:app --host 0.0.0.0 --port 8000
+SQLite is used for the prototype; the schema maps 1:1 to PostgreSQL + TimescaleDB for production.
+"""
+from __future__ import annotations
+
+import os
+import sqlite3
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Literal, Optional
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+ROOT = Path(__file__).resolve().parent
+APP_DIR = ROOT.parent / "app"
+DB_PATH = os.environ.get("MOTORPULSE_DB", str(ROOT / "motorpulse.db"))
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS machines (
+  id TEXT PRIMARY KEY, device_id TEXT NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL,
+  location TEXT, simulated INTEGER NOT NULL DEFAULT 0, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS checks (
+  id TEXT PRIMARY KEY, machine_id TEXT NOT NULL REFERENCES machines(id), ts TEXT NOT NULL,
+  health INTEGER NOT NULL, severity TEXT NOT NULL, z REAL, top_fault TEXT, fault_confidence REAL,
+  trend_alarm INTEGER NOT NULL DEFAULT 0, model_version TEXT, analysis_ms INTEGER, received_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_checks_machine_ts ON checks(machine_id, ts);
+"""
+
+
+@contextmanager
+def db():
+    con = sqlite3.connect(DB_PATH)
+    con.row_factory = sqlite3.Row
+    try:
+        yield con
+        con.commit()
+    finally:
+        con.close()
+
+
+def init_db() -> None:
+    with db() as con:
+        con.executescript(SCHEMA)
+
+
+class MachineIn(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=80)
+    type: str = Field(max_length=32)
+    location: str = Field(default="", max_length=120)
+    simulated: bool = False
+
+
+class CheckIn(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    machine_id: str = Field(min_length=1, max_length=64)
+    ts: datetime
+    health: int = Field(ge=0, le=100)
+    severity: Literal["green", "yellow", "red"]
+    z: Optional[float] = None
+    top_fault: Optional[Literal["bearing", "cavitation", "imbalance", "electrical", "unknown"]] = None
+    fault_confidence: Optional[float] = Field(default=None, ge=0, le=1)
+    trend_alarm: bool = False
+    model_version: Optional[str] = Field(default=None, max_length=32)
+    analysis_ms: Optional[int] = Field(default=None, ge=0)
+
+
+class BatchIn(BaseModel):
+    device_id: str = Field(min_length=1, max_length=64)
+    machines: list[MachineIn] = Field(default_factory=list, max_length=500)
+    checks: list[CheckIn] = Field(max_length=2000)
+
+
+app = FastAPI(title="MotorPulse API", version="1.0.0",
+              description="Sync and fleet API for MotorPulse. Receives check results only; audio never leaves the phone.")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+init_db()
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.post("/v1/checks/batch")
+def checks_batch(batch: BatchIn):
+    """Idempotent: re-sending the same check ids is safe (phones retry when the network drops)."""
+    known = {m.id for m in batch.machines}
+    accepted = duplicates = 0
+    with db() as con:
+        for m in batch.machines:
+            con.execute(
+                """INSERT INTO machines(id, device_id, name, type, location, simulated, first_seen, last_seen)
+                   VALUES (?,?,?,?,?,?,?,?)
+                   ON CONFLICT(id) DO UPDATE SET name=excluded.name, type=excluded.type,
+                   location=excluded.location, last_seen=excluded.last_seen""",
+                (m.id, batch.device_id, m.name, m.type, m.location, int(m.simulated), now(), now()))
+        for c in batch.checks:
+            if c.machine_id not in known and not con.execute("SELECT 1 FROM machines WHERE id=?", (c.machine_id,)).fetchone():
+                raise HTTPException(422, f"unknown machine {c.machine_id}")
+            cur = con.execute(
+                """INSERT OR IGNORE INTO checks(id, machine_id, ts, health, severity, z, top_fault, fault_confidence,
+                   trend_alarm, model_version, analysis_ms, received_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (c.id, c.machine_id, c.ts.isoformat(), c.health, c.severity, c.z, c.top_fault, c.fault_confidence,
+                 int(c.trend_alarm), c.model_version, c.analysis_ms, now()))
+            if cur.rowcount:
+                accepted += 1
+            else:
+                duplicates += 1
+    return {"accepted": accepted, "duplicates": duplicates}
+
+
+@app.get("/v1/fleet/summary")
+def fleet_summary():
+    with db() as con:
+        rows = con.execute(
+            """SELECT m.*, c.ts AS last_ts, c.health, c.severity, c.top_fault, c.fault_confidence, c.trend_alarm,
+                      (SELECT COUNT(*) FROM checks x WHERE x.machine_id = m.id) AS n_checks
+               FROM machines m
+               LEFT JOIN checks c ON c.id = (SELECT id FROM checks y WHERE y.machine_id = m.id ORDER BY ts DESC LIMIT 1)
+               ORDER BY CASE c.severity WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 WHEN 'green' THEN 2 ELSE 3 END, m.name""").fetchall()
+    machines = [dict(r) for r in rows]
+    counts = {s: sum(1 for m in machines if m["severity"] == s) for s in ("red", "yellow", "green")}
+    counts["unchecked"] = sum(1 for m in machines if m["severity"] is None)
+    return {"counts": counts, "machines": machines}
+
+
+@app.get("/v1/machines/{machine_id}/checks")
+def machine_checks(machine_id: str, limit: int = 100):
+    with db() as con:
+        m = con.execute("SELECT * FROM machines WHERE id=?", (machine_id,)).fetchone()
+        if not m:
+            raise HTTPException(404, "machine not found")
+        cs = con.execute("SELECT * FROM checks WHERE machine_id=? ORDER BY ts DESC LIMIT ?", (machine_id, min(limit, 1000))).fetchall()
+    return {"machine": dict(m), "checks": [dict(c) for c in cs]}
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse("/dashboard")
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard():
+    return FileResponse(ROOT / "static" / "dashboard.html")
+
+
+if APP_DIR.exists():
+    app.mount("/app", StaticFiles(directory=APP_DIR, html=True), name="app")
