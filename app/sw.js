@@ -1,9 +1,9 @@
 // Offline-first service worker: the whole app (including the AI engine and demo recordings) is cached on install.
-const CACHE = "motorpulse-v2";
+const CACHE = "motorpulse-v3";
 const SHELL = [
   "./", "index.html", "styles.css", "app.js", "i18n.js", "store.js", "audio.js", "sync.js", "config.js", "manifest.webmanifest",
   "engine/index.js", "engine/dsp.js", "engine/model.js", "engine/faults.js", "engine/trend.js", "engine/wav.js",
-  "icons/icon-192.png", "icons/icon-512.png",
+  "icons/icon-192.png", "icons/icon-512.png", "icons/favicon.svg", "icons/favicon-32.png", "icons/apple-touch-icon.png",
   ...["healthy_enrol_1", "healthy_enrol_2", "healthy_enrol_3", "healthy_check", "healthy_check_noisy", "fault_bearing_early",
     "fault_bearing_severe", "fault_imbalance", "fault_cavitation", "fault_electrical"].map((n) => `samples/SIMULATED_${n}.wav`),
 ];

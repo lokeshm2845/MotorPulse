@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MotorPulse – hear a pump failure before it happens</title>
+<meta name="description" content="Offline AI sound check for farm pumps and motors. Record 10 seconds on any phone and get a health score, likely cause and spoken advice.">
+<meta name="theme-color" content="#0B3D2E">
+<meta property="og:title" content="MotorPulse">
+<meta property="og:description" content="Hear a pump failure before it happens — offline AI sound check on any phone.">
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<style>
+  :root { --deep:#0B3D2E; --green:#14825F; --leaf:#2BB673; --mint:#C8E6D6; --tint:#EDF5F1; --amber:#F5A524; --ink:#1B2420; --muted:#5B6B66; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans","Nirmala UI",sans-serif; color:var(--ink); background:#fff; }
+  a { color:inherit; }
+  .hero { background:var(--deep); color:#fff; overflow:hidden; }
+  .wrap { max-width:1140px; margin:0 auto; padding:0 20px; }
+  nav { display:flex; align-items:center; gap:12px; padding:18px 0; }
+  nav .brand { display:flex; align-items:center; gap:10px; font-weight:800; font-size:20px; text-decoration:none; }
+  nav img { width:32px; height:32px; border-radius:8px; }
+  nav .sp { flex:1; }
+  nav a.l { text-decoration:none; opacity:.85; font-weight:600; font-size:15px; padding:8px 10px; }
+  .h-grid { display:grid; grid-template-columns:1.15fr .85fr; gap:40px; align-items:center; padding:50px 0 80px; }
+  .tag { display:inline-block; font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--amber); }
+  h1 { font-size:clamp(36px,5.4vw,62px); line-height:1.05; margin:14px 0 18px; letter-spacing:-.5px; }
+  .lead { font-size:clamp(17px,2vw,21px); line-height:1.5; color:var(--mint); max-width:560px; }
+  .cta { display:flex; gap:12px; flex-wrap:wrap; margin-top:28px; }
+  .btn { display:inline-flex; align-items:center; gap:10px; text-decoration:none; font-weight:800; font-size:17px; padding:15px 22px; border-radius:14px; }
+  .btn.p { background:var(--amber); color:var(--ink); } .btn.s { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.25); }
+  .btn:hover { transform:translateY(-1px); }
+  .wave { display:flex; align-items:center; gap:9px; height:300px; justify-content:center; }
+  .wave i { width:12px; border-radius:6px; background:var(--leaf); animation:pulse 1.6s ease-in-out infinite; }
+  .wave i.pk { background:var(--amber); }
+  @keyframes pulse { 50% { transform:scaleY(.72); } }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:-46px; position:relative; }
+  .stat { background:#fff; border-radius:18px; box-shadow:0 8px 30px rgba(11,61,46,.12); padding:20px; text-align:center; }
+  .stat b { display:block; font-size:30px; color:var(--green); }
+  .stat span { font-size:14px; color:var(--muted); }
+  section.s { padding:70px 0 10px; }
+  h2 { font-size:32px; margin:0 0 10px; color:var(--deep); }
+  .sub { color:var(--muted); font-size:17px; margin:0 0 28px; }
+  .steps { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .step { background:var(--tint); border-radius:18px; padding:22px; }
+  .step .n { width:40px; height:40px; border-radius:50%; background:var(--green); color:#fff; font-weight:800; display:grid; place-items:center; margin-bottom:12px; }
+  .step h3 { margin:0 0 6px; font-size:18px; } .step p { margin:0; color:var(--muted); line-height:1.5; }
+  .sev { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .sev div { border-radius:18px; padding:22px; }
+  .sev b { font-size:22px; display:block; margin-bottom:6px; }
+  .g { background:#E6F4EE; } .g b { color:var(--green); } .y { background:#FDF0D5; } .y b { color:#9A6200; } .r { background:#FBE0E1; } .r b { color:#B42318; }
+  .band { margin-top:70px; background:var(--tint); }
+  .band .wrap { display:grid; grid-template-columns:1fr 1fr; gap:30px; padding:50px 20px; align-items:center; }
+  ul.ck { list-style:none; padding:0; margin:0; } ul.ck li { padding:8px 0 8px 30px; position:relative; font-size:17px; }
+  ul.ck li:before { content:"✓"; position:absolute; left:0; color:var(--green); font-weight:900; }
+  footer { padding:34px 0 40px; color:var(--muted); font-size:14px; text-align:center; }
+  @media (max-width:860px) { .h-grid, .band .wrap { grid-template-columns:1fr; } .wave { height:160px; } .stats, .steps { grid-template-columns:repeat(2,1fr); } .sev { grid-template-columns:1fr; } }
+  @media (prefers-reduced-motion:reduce) { .wave i { animation:none; } }
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="wrap">
+    <nav><a class="brand" href="/"><img src="/icons/favicon.svg" alt="">MotorPulse</a><span class="sp"></span>
+      <a class="l" href="/dashboard">Dashboard</a><a class="l" href="/docs">API</a><a class="l" href="https://github.com/lokeshm2845/motorpulse">GitHub</a></nav>
+    <div class="h-grid">
+      <div>
+        <span class="tag">PRASUNEX INNOVATHON 2026 · Working prototype</span>
+        <h1>Hear a pump failure before it happens.</h1>
+        <p class="lead">Record 10 seconds of a running pump on any phone. MotorPulse compares it with that pump's own healthy sound and tells the farmer — in their language — whether to relax, watch, or act now. Fully offline.</p>
+        <div class="cta"><a class="btn p" href="/app/">▶ Open the phone app</a><a class="btn s" href="/dashboard">See the live fleet dashboard</a></div>
+      </div>
+      <div class="wave" aria-hidden="true" id="wave"></div>
+    </div>
+  </div>
+</div>
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><b>10 s</b><span>sound check</span></div>
+    <div class="stat"><b>&lt; 0.1 s</b><span>analysis on the phone</span></div>
+    <div class="stat"><b>0 bytes</b><span>audio uploaded</span></div>
+    <div class="stat"><b>3</b><span>languages: EN · हिन्दी · मराठी</span></div>
+  </div>
+
+  <section class="s">
+    <h2>How it works</h2>
+    <p class="sub">An AI stethoscope for machines, built for farms with weak networks and budget phones.</p>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>Enrol</h3><p>Record the pump 3 times while it is healthy. That becomes its own sound fingerprint.</p></div>
+      <div class="step"><div class="n">2</div><h3>Check</h3><p>Hold the phone at the same spot for 10 seconds. Bad recordings are rejected with guidance.</p></div>
+      <div class="step"><div class="n">3</div><h3>Understand</h3><p>Health 0–100, likely cause, what to do and a typical repair cost — spoken aloud.</p></div>
+      <div class="step"><div class="n">4</div><h3>Act early</h3><p>Trends catch slow decline; one tap shares the report with a mechanic.</p></div>
+    </div>
+  </section>
+
+  <section class="s">
+    <h2>Clear verdicts, not charts</h2>
+    <p class="sub">Every check ends in one of three answers a farmer can act on.</p>
+    <div class="sev">
+      <div class="g"><b>Healthy</b>The pump sounds like its normal self. Check again in a week.</div>
+      <div class="y"><b>Watch</b>Something changed. Simple do-now advice and a re-check in 2–3 days.</div>
+      <div class="r"><b>Act now</b>Likely cause such as bearing wear or dry running, with steps to prevent bigger damage.</div>
+    </div>
+  </section>
+</div>
+<div class="band">
+  <div class="wrap">
+    <div><h2>For FPOs, panchayats and workshops</h2><p class="sub" style="margin:0">When phones come online, results sync to a live fleet dashboard showing which pumps need attention first.</p>
+      <div class="cta"><a class="btn p" href="/dashboard" style="background:var(--deep);color:#fff">Open the dashboard →</a></div></div>
+    <ul class="ck"><li>Live updates the moment a phone syncs</li><li>Sorted by urgency, with likely cause and trend</li><li>Health history for every machine</li><li>Privacy by design — only results, never audio</li></ul>
+  </div>
+</div>
+<footer>MotorPulse · Team Vertex Victors — Parth Bhoi (Team Leader), Lokesh Magare · SVKM'S NMIMS MPSTME Shirpur · PRASUNEX INNOVATHON 2026</footer>
+<script>
+  const w = document.getElementById("wave");
+  for (let i = 0; i < 26; i++) {
+    const t = i / 26, pk = Math.abs(i - 18) <= 1;
+    const h = pk ? (i === 18 ? 100 : 72) : 18 + 32 * Math.abs(Math.sin(t * 9.5)) * (0.6 + 0.4 * Math.sin(t * 3));
+    const el = document.createElement("i"); if (pk) el.className = "pk";
+    el.style.height = h + "%"; el.style.animationDelay = (i * 0.06) + "s"; w.append(el);
+  }
+</script>
+</body>
+</html>

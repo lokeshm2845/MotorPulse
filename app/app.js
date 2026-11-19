@@ -128,8 +128,14 @@ async function home() {
         h("div", { style: "margin-top:6px" }, m.model ? sevPill(last) : h("span", { class: "pill grey" }, t("not_enrolled"))))));
   }
   const hasDemo = ms.some((m) => m.demo);
+  const pending = (await checks.unsynced()).length;
+  const syncChip = serverUrl() && ms.length
+    ? h("div", { class: "pill " + (!navigator.onLine ? "grey" : pending ? "yellow" : "green"), style: "margin-top:4px", role: "status" },
+        h("span", { class: "dot" }), !navigator.onLine ? t("s_off", { n: pending }) : pending ? t("s_wait", { n: pending }) : t("s_ok"))
+    : null;
   render(
     h("h1", {}, t("tagline")),
+    syncChip,
     h("h2", {}, t("my_machines")),
     ...(rows.length ? rows : [h("p", { class: "muted" }, t("no_machines"))]),
     h("div", { style: "margin-top:18px" },
@@ -154,6 +160,7 @@ async function createDemo() {
     prev.push(r.health);
     await checks.put(checkRecord(m, r, Date.now() - (3 - i) * 7 * 86400000));
   }
+  syncNow().catch(() => {});
   location.hash = `#/m/${m.id}`;
 }
 
@@ -393,7 +400,12 @@ async function route() {
 }
 
 window.addEventListener("hashchange", route);
-window.addEventListener("online", () => syncNow().catch(() => {}));
+const onHome = () => (location.hash || "#/") === "#/";
+window.addEventListener("online", () => syncNow().then(() => onHome() && route()).catch(() => {}));
+window.addEventListener("offline", () => onHome() && route());
+// retry pending results now and then (e.g. the server was asleep), and refresh the home chip
+setInterval(() => checks.unsynced().then((p) => p.length && navigator.onLine && syncNow().then(() => onHome() && route())).catch(() => {}), 45000);
+syncNow().then((r) => r.sent && onHome() && route()).catch(() => {});
 let deferredInstall = null;
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault(); deferredInstall = e;
